@@ -126,6 +126,7 @@
             <div class="meta" data-zh-html="当前套餐：<strong style=&quot;color:var(--brand);&quot;>Free · 公测</strong>" data-en-html="Current plan: <strong style=&quot;color:var(--brand);&quot;>Free · Beta</strong>">当前套餐：<strong style="color:var(--brand);">Free · 公测</strong></div>
           </div>
           <button class="menu-item" onclick="openResetPwd()"><span class="ico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 016 0v2"/></svg></span> <span data-zh="修改密码" data-en="Change password">修改密码</span></button>
+          <button class="menu-item" onclick="openRebindPhone()"><span class="ico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="1" width="8" height="14" rx="2"/><path d="M7 12h2"/></svg></span> <span data-zh="换绑手机" data-en="Change phone">换绑手机</span></button>
           <a class="menu-item danger" href="../login.html"><span class="ico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2H3.5A1.5 1.5 0 002 3.5v9A1.5 1.5 0 003.5 14H6"/><path d="M10 11l3-3-3-3"/><path d="M13 8H6"/></svg></span> <span data-zh="退出登录" data-en="Sign out">退出登录</span></a>
         </div>
       </div>
@@ -438,6 +439,96 @@
   .reset-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 </style>
 
+<!-- 换绑手机 -->
+<div class="reset-overlay" id="rebind-modal" onclick="if(event.target===this)closeRebindPhone()">
+  <div class="reset-modal">
+    <div class="reset-head">
+      <h3 data-zh="换绑手机" data-en="Change phone">换绑手机</h3>
+      <button class="reset-close" onclick="closeRebindPhone()" aria-label="Close">×</button>
+    </div>
+
+    <div class="rebind-steps">
+      <div class="rebind-step active" id="rb-step-1"><span class="dot">1</span><span data-zh="校验旧手机" data-en="Verify current">校验旧手机</span></div>
+      <div class="rebind-bar"></div>
+      <div class="rebind-step" id="rb-step-2"><span class="dot">2</span><span data-zh="绑定新手机" data-en="Bind new">绑定新手机</span></div>
+      <div class="rebind-bar"></div>
+      <div class="rebind-step" id="rb-step-3"><span class="dot">3</span><span data-zh="完成" data-en="Done">完成</span></div>
+    </div>
+
+    <div id="rb-pane-1">
+      <p class="reset-desc" data-zh="为账号安全，请先校验当前绑定的手机号。" data-en="For your security, verify your current bound phone first.">为账号安全，请先校验当前绑定的手机号。</p>
+      <div class="reset-phone">
+        <span data-zh="当前绑定" data-en="Current">当前绑定</span>
+        <strong>+86 138****0000</strong>
+      </div>
+      <form onsubmit="event.preventDefault(); rebindNext(2);">
+        <div class="form-field">
+          <label data-zh="短信验证码" data-en="SMS code">短信验证码</label>
+          <div class="reset-sms">
+            <input id="rb-old-code" class="input" type="text" placeholder="请输入验证码" data-zh-placeholder="请输入验证码" data-en-placeholder="Enter verification code" required/>
+            <button type="button" class="btn btn-outline btn-sm" onclick="sendRebindSms(this)" data-zh="发送验证码" data-en="Send code">发送验证码</button>
+          </div>
+        </div>
+        <div class="reset-actions">
+          <button type="button" class="btn btn-outline" onclick="closeRebindPhone()" data-zh="取消" data-en="Cancel">取消</button>
+          <button type="submit" class="btn btn-primary" data-zh="下一步" data-en="Next">下一步</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="rb-pane-2" class="hidden">
+      <p class="reset-desc" data-zh="请输入新的手机号并校验，新手机号将作为下次登录与重置密码的凭据。" data-en="Enter the new phone and verify it. It will be used for sign-in and password reset.">请输入新的手机号并校验，新手机号将作为下次登录与重置密码的凭据。</p>
+      <form onsubmit="event.preventDefault(); rebindFinish();">
+        <div class="form-field">
+          <label data-zh="新手机号" data-en="New phone number">新手机号</label>
+          <div class="rebind-phone-input">
+            <select id="rb-new-cc"><option>+86</option><option>+852</option><option>+65</option><option>+1</option></select>
+            <input id="rb-new-phone" type="tel" placeholder="请输入新手机号" data-zh-placeholder="请输入新手机号" data-en-placeholder="Enter the new phone number" required/>
+          </div>
+          <div class="helper" data-zh="新号码不可与已被多账号占用的历史号码冲突，否则将无法绑定" data-en="Cannot reuse a phone number that is linked to multiple legacy accounts">新号码不可与已被多账号占用的历史号码冲突，否则将无法绑定</div>
+        </div>
+        <div class="form-field">
+          <label data-zh="新手机短信验证码" data-en="SMS code">新手机短信验证码</label>
+          <div class="reset-sms">
+            <input id="rb-new-code" class="input" type="text" placeholder="请输入验证码" data-zh-placeholder="请输入验证码" data-en-placeholder="Enter verification code" required/>
+            <button type="button" class="btn btn-outline btn-sm" onclick="sendRebindSms(this)" data-zh="发送验证码" data-en="Send code">发送验证码</button>
+          </div>
+        </div>
+        <div class="reset-actions">
+          <button type="button" class="btn btn-outline" onclick="rebindNext(1)" data-zh="上一步" data-en="Back">上一步</button>
+          <button type="submit" class="btn btn-primary" data-zh="确认换绑" data-en="Confirm">确认换绑</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="rb-pane-3" class="hidden" style="text-align: center; padding: 12px 0 4px;">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: #DCFCE7; color: #059669; margin: 8px auto 16px; display: grid; place-items: center;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 7"/></svg>
+      </div>
+      <h4 style="margin: 0 0 6px; font-size: 16px;" data-zh="换绑成功" data-en="Phone rebind successful">换绑成功</h4>
+      <p style="color: var(--ink-500); font-size: 13px; margin: 0 0 18px;" id="rb-success-text" data-zh="账号绑定手机号已更新" data-en="Your bound phone has been updated">账号绑定手机号已更新</p>
+      <div class="reset-actions" style="justify-content: center;">
+        <button type="button" class="btn btn-primary" onclick="closeRebindPhone()" data-zh="完成" data-en="Done">完成</button>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+  .rebind-steps { display: flex; align-items: center; gap: 6px; margin: 4px 0 18px; }
+  .rebind-step { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-500); white-space: nowrap; }
+  .rebind-step .dot { width: 20px; height: 20px; border-radius: 50%; background: var(--ink-200); color: var(--ink-500); display: grid; place-items: center; font-size: 11px; font-weight: 600; }
+  .rebind-step.active { color: var(--ink-900); font-weight: 600; }
+  .rebind-step.active .dot { background: var(--brand); color: white; }
+  .rebind-step.done { color: #059669; }
+  .rebind-step.done .dot { background: #10B981; color: white; }
+  .rebind-bar { flex: 1; height: 2px; background: var(--ink-200); border-radius: 1px; }
+  .rebind-bar.done { background: #10B981; }
+  .rebind-phone-input { display: flex; border: 1px solid var(--ink-200); border-radius: var(--radius); overflow: hidden; transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+  .rebind-phone-input:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .rebind-phone-input select { border: none; background: var(--ink-100); padding: 0 12px; font-size: 14px; color: var(--ink-700); border-right: 1px solid var(--ink-200); }
+  .rebind-phone-input input { flex: 1; border: none; padding: 10px 14px; font-size: 14px; outline: none; background: transparent; min-width: 0; }
+</style>
+
 <script src="../assets/app.js"></script>
 <script>
   function openResetPwd() { document.getElementById('reset-modal').classList.add('open'); }
@@ -453,6 +544,35 @@
     if (a !== b) { alert(isEn ? 'Passwords do not match' : '两次输入不一致'); return; }
     alert(isEn ? 'Password changed successfully' : '密码修改成功');
     closeResetPwd();
+  }
+
+  // 换绑手机
+  function openRebindPhone() { rebindNext(1); document.getElementById('rebind-modal').classList.add('open'); }
+  function closeRebindPhone() { document.getElementById('rebind-modal').classList.remove('open'); rebindNext(1); }
+  function sendRebindSms(btn) {
+    let s = 60; btn.disabled = true; const orig = btn.textContent; btn.textContent = `${s}s`;
+    const t = setInterval(() => { s--; btn.textContent = `${s}s`; if (s <= 0) { clearInterval(t); btn.disabled = false; btn.textContent = orig; } }, 1000);
+  }
+  function rebindNext(step) {
+    [1,2,3].forEach(i => {
+      document.getElementById('rb-pane-' + i).classList.toggle('hidden', i !== step);
+      const el = document.getElementById('rb-step-' + i);
+      el.classList.remove('active', 'done');
+      if (i < step) el.classList.add('done');
+      else if (i === step) el.classList.add('active');
+    });
+    document.querySelectorAll('#rebind-modal .rebind-bar').forEach((bar, idx) => {
+      bar.classList.toggle('done', step > idx + 1);
+    });
+  }
+  function rebindFinish() {
+    const cc = document.getElementById('rb-new-cc').value;
+    const ph = document.getElementById('rb-new-phone').value.trim();
+    const masked = ph.length >= 4 ? ph.slice(0,3) + '****' + ph.slice(-4) : ph;
+    const isEn = document.documentElement.dataset.lang === 'en';
+    document.getElementById('rb-success-text').textContent =
+      isEn ? `Bound phone updated to ${cc} ${masked}` : `账号绑定手机号已更新为 ${cc} ${masked}`;
+    rebindNext(3);
   }
 </script>
 <script>

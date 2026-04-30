@@ -389,7 +389,7 @@
           <li>后端校验 <code>username + password_hash</code></li>
           <li>校验通过 → 颁发 session/token → 跳转 <code>/console/dashboard</code></li>
           <li>失败：返回错误码（账号不存在 / 密码错误 / 锁定）</li>
-          <li>"忘记密码"入口 → 走"用手机号重置"流程（账号下绑定手机号 + 短信验证码 + 新密码）</li>
+          <li>"忘记密码"入口 → 切到 <strong>D 忘记密码</strong> 视图</li>
         </ol>
 
         <h4><span class="num">B</span> 手机号登录 / 注册一体入口</h4>
@@ -412,11 +412,41 @@
 
         <h4><span class="num">C</span> 接口口径建议</h4>
         <ul>
-          <li><code>POST /auth/sms/send</code> — 发送验证码（60s 限流，不区分新老用户）</li>
+          <li><code>POST /auth/sms/send</code> — 发送验证码（60s 限流，不区分新老用户 / 旧手机 / 新手机）</li>
           <li><code>POST /auth/phone/verify</code> — 校验验证码，返回 <code>{ accounts: [...] }</code> 数组（0 / 1 / N）</li>
           <li><code>POST /auth/login</code> — 入参 <code>account_id</code> + 已校验的 phone token，颁发 session</li>
           <li><code>POST /auth/register</code> — 仅当 verify 返回的 accounts 数组为空时可调用</li>
+          <li><code>POST /auth/password/reset</code> — 忘记密码用：入参 <code>{ account, phone, sms_code, new_password }</code></li>
+          <li><code>POST /account/phone/rebind</code> — 已登录态换绑：入参 <code>{ old_sms_code, new_phone, new_sms_code }</code></li>
         </ul>
+
+        <h4><span class="num">D</span> 忘记密码（未登录态）</h4>
+        <p style="margin: 6px 0; color: rgba(255,255,255,0.7);">入口：账号密码 Tab 上的"忘记密码？"链接 → 切换到忘记密码视图</p>
+        <ol>
+          <li>用户输入<strong style="color:white;">账号 + 该账号绑定的手机号 + 短信验证码 + 新密码 + 确认密码</strong></li>
+          <li>前端校验：两次密码一致、密码强度达标、账号格式合法</li>
+          <li>后端校验：账号存在 ∧ 手机号确为该账号绑定号码 ∧ 验证码有效</li>
+        </ol>
+        <div class="branch">
+          <strong>校验失败</strong> → 返回 401/404，前端字段下提示"账号或绑定手机号不正确"<br/>
+          <strong>校验成功</strong> → 落库新 password_hash → 自动颁发 session → 跳 dashboard
+        </div>
+        <ul>
+          <li><strong>注意</strong>：若账号绑定的是同号多账号中的一个，校验时仍按 <code>account + phone</code> 双因子；不会因多账号导致歧义</li>
+          <li>已登录态走"修改密码"弹窗（用绑定手机号即可，无需再输账号）</li>
+        </ul>
+
+        <h4><span class="num">E</span> 换绑手机（已登录态）</h4>
+        <p style="margin: 6px 0; color: rgba(255,255,255,0.7);">入口：控制台用户菜单"换绑手机"</p>
+        <ol>
+          <li><strong>Step 1</strong>：校验旧手机短信验证码（由后端比对当前账号绑定号码）</li>
+          <li><strong>Step 2</strong>：输入新手机号 + 新手机短信验证码</li>
+          <li><strong>Step 3</strong>：完成提示，新号码即时生效</li>
+        </ol>
+        <div class="branch">
+          <strong>新号码冲突校验</strong>：若新号码已被同号多账号占用，返回 409，前端提示"该号码已绑定多个账号，无法绑定"<br/>
+          <strong>新号码已被单账号绑定</strong>：返回 409，提示"该号码已绑定其他账号"
+        </div>
       </div>
     </div>
 
@@ -459,10 +489,63 @@
           </div>
         </div>
 
-        <a class="forget-link" href="#" data-zh="忘记密码？用手机号重置 →" data-en="Forgot password? Reset with phone →">忘记密码？用手机号重置 →</a>
+        <a class="forget-link" onclick="showForgot()" data-zh="忘记密码？用手机号重置 →" data-en="Forgot password? Reset with phone →">忘记密码？用手机号重置 →</a>
 
         <button type="submit" class="btn btn-primary btn-block btn-lg" data-zh="登 录" data-en="Sign in">登 录</button>
       </form>
+
+      <!-- 忘记密码：用手机号重置 -->
+      <div id="form-forgot" class="hidden">
+        <a class="back-link" onclick="hideForgot()" data-zh="← 返回登录" data-en="← Back to sign in">← 返回登录</a>
+
+        <h3 style="font-size:18px; margin: 0 0 6px;" data-zh="忘记密码？" data-en="Forgot password?">忘记密码？</h3>
+        <p style="color: var(--ink-500); font-size: 13px; margin: 0 0 18px;" data-zh="输入账号与该账号绑定的手机号，校验通过后即可设置新密码。" data-en="Enter your account and its bound phone — verify and set a new password.">输入账号与该账号绑定的手机号，校验通过后即可设置新密码。</p>
+
+        <form onsubmit="submitForgot(event)">
+          <div class="form-field">
+            <label data-zh="账号" data-en="Account">账号</label>
+            <div class="input-icon-wrap">
+              <span class="lead-ico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3 2.5-5 6-5s6 2 6 5"/></svg></span>
+              <input id="fg-account" type="text" placeholder="请输入企业标识或用户名" data-zh-placeholder="请输入企业标识或用户名" data-en-placeholder="Enter your org ID or username" required/>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label data-zh="绑定手机号" data-en="Bound phone">绑定手机号</label>
+            <div class="phone-input">
+              <select class="cc" id="fg-cc"><option>+86</option><option>+852</option><option>+65</option><option>+1</option></select>
+              <input id="fg-phone" type="tel" placeholder="请输入该账号绑定的手机号" data-zh-placeholder="请输入该账号绑定的手机号" data-en-placeholder="Enter the phone bound to this account" required/>
+            </div>
+            <div class="helper" data-zh="后端会校验账号与手机号绑定关系，不匹配将返回错误" data-en="The server verifies that the phone is bound to the account; mismatch returns an error">后端会校验账号与手机号绑定关系，不匹配将返回错误</div>
+          </div>
+
+          <div class="form-field">
+            <label data-zh="短信验证码" data-en="SMS code">短信验证码</label>
+            <div class="sms-group">
+              <div class="input-with-cc">
+                <input id="fg-code" type="text" placeholder="请输入验证码" data-zh-placeholder="请输入验证码" data-en-placeholder="Enter verification code" required/>
+              </div>
+              <button type="button" class="sms-btn" onclick="sendSms(this)" data-zh="发送验证码" data-en="Send code">发送验证码</button>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label data-zh="新密码" data-en="New password">新密码</label>
+            <div class="pwd-wrap">
+              <input id="fg-pwd1" type="password" placeholder="至少 8 位，含字母与数字" data-zh-placeholder="至少 8 位，含字母与数字" data-en-placeholder="At least 8 chars, letters + numbers" required/>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label data-zh="确认新密码" data-en="Confirm new password">确认新密码</label>
+            <div class="pwd-wrap">
+              <input id="fg-pwd2" type="password" placeholder="再次输入新密码" data-zh-placeholder="再次输入新密码" data-en-placeholder="Re-enter your new password" required/>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" data-zh="重置密码并登录" data-en="Reset & sign in">重置密码并登录</button>
+        </form>
+      </div>
 
       <!-- 手机号登录 / 注册：登录注册一体入口（Step 1：手机号 + 验证码） -->
       <form id="form-sms" class="hidden" onsubmit="handlePhoneSubmit(event)">
@@ -508,11 +591,6 @@
             <div class="ava">A</div>
             <div class="meta">
               <div class="name">acme-corp</div>
-              <div class="sub">
-                <span data-zh="企业账号" data-en="Org account">企业账号</span>
-                <span>·</span>
-                <span data-zh="最近登录 2 小时前" data-en="Last sign-in 2h ago">最近登录 2 小时前</span>
-              </div>
             </div>
             <span class="arrow"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3l5 5-5 5"/></svg></span>
           </div>
@@ -521,11 +599,6 @@
             <div class="ava">Z</div>
             <div class="meta">
               <div class="name">zhangsan</div>
-              <div class="sub">
-                <span data-zh="个人账号" data-en="Personal">个人账号</span>
-                <span>·</span>
-                <span data-zh="最近登录 3 天前" data-en="Last sign-in 3d ago">最近登录 3 天前</span>
-              </div>
             </div>
             <span class="arrow"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3l5 5-5 5"/></svg></span>
           </div>
@@ -534,17 +607,10 @@
             <div class="ava">D</div>
             <div class="meta">
               <div class="name">demo-team-2024</div>
-              <div class="sub">
-                <span data-zh="历史账号" data-en="Legacy">历史账号</span>
-                <span>·</span>
-                <span data-zh="最近登录 30+ 天前" data-en="Last sign-in 30+ days ago">最近登录 30+ 天前</span>
-              </div>
             </div>
             <span class="arrow"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3l5 5-5 5"/></svg></span>
           </div>
         </div>
-
-        <div class="helper" data-zh="提示：如需合并账号，请联系企业管理员或客服。" data-en="Tip: contact your org admin or support to merge accounts.">提示：如需合并账号，请联系企业管理员或客服。</div>
       </div>
 
       <p class="login-agreement" data-zh-html="登录 / 注册即代表您同意 SenseNova <a href=&quot;#&quot;>用户协议</a> 和 <a href=&quot;#&quot;>隐私政策</a>" data-en-html="By continuing you agree to SenseNova's <a href=&quot;#&quot;>Terms of Service</a> and <a href=&quot;#&quot;>Privacy Policy</a>">登录 / 注册即代表您同意 SenseNova <a href="#">用户协议</a> 和 <a href="#">隐私政策</a></p>
@@ -614,6 +680,39 @@ function pickAccount(card, name) {
   card.style.opacity = '1';
   card.style.borderColor = 'var(--brand)';
   setTimeout(() => { location.href = 'console/dashboard.html'; }, 200);
+}
+
+function showForgot() {
+  document.querySelectorAll('.login-tabs').forEach(el => el.classList.add('hidden'));
+  document.getElementById('form-pw').classList.add('hidden');
+  document.getElementById('form-sms').classList.add('hidden');
+  document.getElementById('form-forgot').classList.remove('hidden');
+  const agreement = document.querySelector('.login-agreement');
+  if (agreement) agreement.classList.add('hidden');
+}
+
+function hideForgot() {
+  document.getElementById('form-forgot').classList.add('hidden');
+  document.querySelectorAll('.login-tabs').forEach(el => el.classList.remove('hidden'));
+  // 恢复到当前激活的 Tab
+  const active = document.querySelector('.login-tabs .t.active');
+  const mode = active && active.textContent.trim().startsWith('手机') ? 'sms'
+            : active && active.textContent.trim().toLowerCase().startsWith('phone') ? 'sms'
+            : 'pw';
+  document.getElementById('form-pw').classList.toggle('hidden', mode !== 'pw');
+  document.getElementById('form-sms').classList.toggle('hidden', mode !== 'sms');
+  const agreement = document.querySelector('.login-agreement');
+  if (agreement) agreement.classList.remove('hidden');
+}
+
+function submitForgot(e) {
+  e.preventDefault();
+  const a = document.getElementById('fg-pwd1').value;
+  const b = document.getElementById('fg-pwd2').value;
+  const isEn = document.documentElement.dataset.lang === 'en';
+  if (a !== b) { alert(isEn ? 'Passwords do not match' : '两次输入不一致'); return; }
+  alert(isEn ? 'Password has been reset. Signing you in…' : '密码重置成功，正在登录…');
+  location.href = 'console/dashboard.html';
 }
 </script>
 <script src="assets/app.js"></script>
