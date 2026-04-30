@@ -472,10 +472,11 @@
   .sms-btn:disabled { color: var(--ink-400); background: var(--ink-50); cursor: default; border-color: var(--ink-200); }
 
   .forget-link {
-    display: inline-block;
+    display: block;
+    text-align: right;
     font-size: 13px;
     color: var(--ink-500);
-    margin: -8px 0 18px;
+    margin: -4px 0 18px;
     text-decoration: none;
     cursor: pointer;
     transition: color var(--dur) var(--ease);
@@ -656,6 +657,30 @@
         <button type="submit" class="btn btn-primary btn-block btn-lg" data-zh="登 录" data-en="Sign in">登 录</button>
       </form>
 
+      <!-- 手机号登录 / 注册：登录注册一体入口（Step 1：手机号 + 验证码） -->
+      <form id="form-sms" onsubmit="handlePhoneSubmit(event)">
+        <div class="form-field">
+          <label data-zh="手机号" data-en="Phone number">手机号</label>
+          <div class="phone-input">
+            <select class="cc" id="sms-cc"><option>+86</option><option>+852</option><option>+65</option><option>+1</option></select>
+            <input id="sms-phone" type="tel" placeholder="请输入手机号" data-zh-placeholder="请输入手机号" data-en-placeholder="Enter your phone number" required/>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label data-zh="短信验证码" data-en="SMS code">短信验证码</label>
+          <div class="sms-group">
+            <div class="input-with-cc">
+              <input id="sms-code" type="text" placeholder="请输入验证码" data-zh-placeholder="请输入验证码" data-en-placeholder="Enter verification code" required/>
+            </div>
+            <button type="button" class="sms-btn" onclick="sendSms(this)" data-zh="发送验证码" data-en="Send code">发送验证码</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" data-zh="下一步" data-en="Continue">下一步</button>
+      </form>
+      </div>
+
       <!-- 忘记密码：用手机号重置 -->
       <div id="form-forgot" class="hidden">
         <a class="back-link" onclick="hideForgot()" data-zh="← 返回登录" data-en="← Back to sign in">← 返回登录</a>
@@ -668,7 +693,7 @@
             <label data-zh="账号" data-en="Account">账号</label>
             <div class="input-icon-wrap">
               <span class="lead-ico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3 2.5-5 6-5s6 2 6 5"/></svg></span>
-              <input id="fg-account" type="text" placeholder="请输入企业标识或用户名" data-zh-placeholder="请输入企业标识或用户名" data-en-placeholder="Enter your org ID or username" required/>
+              <input id="fg-account" type="text" placeholder="请输入用户名" data-zh-placeholder="请输入用户名" data-en-placeholder="Enter your username" required/>
             </div>
           </div>
 
@@ -707,30 +732,6 @@
 
           <button type="submit" class="btn btn-primary btn-block btn-lg" data-zh="重置密码并登录" data-en="Reset & sign in">重置密码并登录</button>
         </form>
-      </div>
-
-      <!-- 手机号登录 / 注册：登录注册一体入口（Step 1：手机号 + 验证码） -->
-      <form id="form-sms" onsubmit="handlePhoneSubmit(event)">
-        <div class="form-field">
-          <label data-zh="手机号" data-en="Phone number">手机号</label>
-          <div class="phone-input">
-            <select class="cc" id="sms-cc"><option>+86</option><option>+852</option><option>+65</option><option>+1</option></select>
-            <input id="sms-phone" type="tel" placeholder="请输入手机号" data-zh-placeholder="请输入手机号" data-en-placeholder="Enter your phone number" required/>
-          </div>
-        </div>
-
-        <div class="form-field">
-          <label data-zh="短信验证码" data-en="SMS code">短信验证码</label>
-          <div class="sms-group">
-            <div class="input-with-cc">
-              <input id="sms-code" type="text" placeholder="请输入验证码" data-zh-placeholder="请输入验证码" data-en-placeholder="Enter verification code" required/>
-            </div>
-            <button type="button" class="sms-btn" onclick="sendSms(this)" data-zh="发送验证码" data-en="Send code">发送验证码</button>
-          </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-block btn-lg" data-zh="下一步" data-en="Continue">下一步</button>
-      </form>
       </div>
 
       <!-- 手机号登录：Step 2 — 同号多账号选择 -->
