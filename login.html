@@ -662,7 +662,7 @@
         <div class="form-field">
           <label data-zh="手机号" data-en="Phone number">手机号</label>
           <div class="phone-input">
-            <select class="cc" id="sms-cc"><option>+86</option><option>+852</option><option>+65</option><option>+1</option></select>
+            <span class="cc" id="sms-cc" style="display:flex; align-items:center;">+86</span>
             <input id="sms-phone" type="tel" placeholder="请输入手机号" data-zh-placeholder="请输入手机号" data-en-placeholder="Enter your phone number" required/>
           </div>
         </div>
@@ -700,7 +700,7 @@
           <div class="form-field">
             <label data-zh="绑定手机号" data-en="Bound phone">绑定手机号</label>
             <div class="phone-input">
-              <select class="cc" id="fg-cc"><option>+86</option><option>+852</option><option>+65</option><option>+1</option></select>
+              <span class="cc" id="fg-cc" style="display:flex; align-items:center;">+86</span>
               <input id="fg-phone" type="tel" placeholder="请输入该账号绑定的手机号" data-zh-placeholder="请输入该账号绑定的手机号" data-en-placeholder="Enter the phone bound to this account" required/>
             </div>
             <div class="helper" data-zh="后端会校验账号与手机号绑定关系，不匹配将返回错误" data-en="The server verifies that the phone is bound to the account; mismatch returns an error">后端会校验账号与手机号绑定关系，不匹配将返回错误</div>
